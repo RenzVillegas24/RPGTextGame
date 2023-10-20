@@ -38,8 +38,9 @@ class MainActivity : AppCompatActivity() {
 
 
     private var myTurn: Boolean = true
-    private var myHealth: Int = 500
-    private var monsterHealth: Int = 500
+    private var baseHealth = 200
+    private var myHealth: Int = baseHealth
+    private var monsterHealth: Int = baseHealth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -359,8 +360,8 @@ class MainActivity : AppCompatActivity() {
         rollButton.setOnClickListener {
 
             if (rollButton.text == "Play Again"){
-                myHealth = 500
-                monsterHealth = 500
+                myHealth = baseHealth
+                monsterHealth = baseHealth
                 myDefense = 1.0F
                 monsterDefense = 1.0F
                 meStatsText.text = "$myHealth HP"
