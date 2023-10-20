@@ -38,8 +38,8 @@ class MainActivity : AppCompatActivity() {
 
 
     private var myTurn: Boolean = true
-    private var myHealth: Int = 200
-    private var monsterHealth: Int = 200
+    private var myHealth: Int = 500
+    private var monsterHealth: Int = 500
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +59,9 @@ class MainActivity : AppCompatActivity() {
         actionTextView = findViewById(R.id.txtAction)
         meCardView = findViewById(R.id.cardMe)
         monsterCardView = findViewById(R.id.cardMonster)
+
+        meStatsText.text = "$myHealth HP"
+        monsterStatsText.text = "$monsterHealth HP"
 
 
         val sz125dp = TypedValue.applyDimension(
@@ -153,16 +156,13 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        var myDefense = 0.0F
-        var monsterDefense = 0.0F
+        var myDefense = 1.0F
+        var monsterDefense = 1.0F
 
         meCardView.cardElevation = 20F
         monsterCardView.cardElevation = 0F
 
         fun monsterAction() {
-            // Monster turn with random actions
-            meCardView.cardElevation = 0F
-            monsterCardView.cardElevation = 20F
 
             // Add an animation for selecting the random action
 
@@ -171,37 +171,181 @@ class MainActivity : AppCompatActivity() {
             var monsterAction = 0
 
 
-            var countDownTimer = object : CountDownTimer(2000, 100) {
+            var countDownTimer = object : CountDownTimer(3000, 250) {
                 override fun onTick(millisUntilFinished: Long) {
                     attackSwitch.isEnabled = false
                     defendSwitch.isEnabled = false
                     healSwitch.isEnabled = false
                     rollButton.isEnabled = false
-                    monsterAction = Random.nextInt(actions.size)
-                    actionTextView.text = "CHOOSING ACTION:\n${actions[monsterAction]}"
+                    if (monsterDefense == 1.0F)
+                        monsterAction = Random.nextInt(actions.size)
+                    else
+                        monsterAction = Random.nextInt(actions.size - 1)
 
-                    if (monsterAction == 0)
+                    actionTextView.text = "MONSTER IS CHOOSING AN ACTION:\n${actions[monsterAction]}"
+
+                    if (monsterAction == 0) {
                         actionImage.setImageResource(R.drawable.heart)
-                    else if (monsterAction == 1)
+                        healSwitch.isChecked = true
+                        attackSwitch.isChecked = false
+                        defendSwitch.isChecked = false
+                    }
+                    else if (monsterAction == 1) {
                         actionImage.setImageResource(R.drawable.sword)
-                    else if (monsterAction == 2)
+                        attackSwitch.isChecked = true
+                        healSwitch.isChecked = false
+                        defendSwitch.isChecked = false
+                    }
+                    else if (monsterAction == 2) {
                         actionImage.setImageResource(R.drawable.shield)
+                        defendSwitch.isChecked = true
+                        attackSwitch.isChecked = false
+                        healSwitch.isChecked = false
+                    }
 
                 }
 
                 override fun onFinish() {
-                    attackSwitch.isEnabled = true
-                    defendSwitch.isEnabled = true
-                    healSwitch.isEnabled = true
-                    rollButton.isEnabled = true
-
                     actionTextView.text = "MONSTER ACTION:\n${actions[monsterAction]}"
+
+                    Handler(Looper.getMainLooper()).postDelayed({
+
+                        fun myTurn(){
+                            actionTextView.text = "YOUR TURN"
+                            attackSwitch.isEnabled = true
+                            defendSwitch.isEnabled = true
+                            healSwitch.isEnabled = true
+                            rollButton.isEnabled = false
+
+                            attackSwitch.isChecked = false
+                            defendSwitch.isChecked = false
+                            healSwitch.isChecked = false
+
+                            meCardView.cardElevation = 20F
+                            monsterCardView.cardElevation = 0F
+
+                            shrinkAnimation.start()
+
+                            meText.text = "Your Turn"
+                            monsterText.text = "Monster"
+                        }
+
+                        if (monsterAction == 1) {
+                            var myHealthChanges = 0
+                            actionImage.setImageResource(R.drawable.sword)
+                            actionImage.animate()
+                                .rotation(360F*3)
+                                .setDuration(1500)
+                                .setDuration(1500).setUpdateListener { p0 ->
+                                    myHealthChanges = (Random.nextInt(10,100)*myDefense).toInt()
+                                    actionTextView.text = "MONSTER IS ATTACKING:\n$myHealthChanges HP"
+                                }
+                                .setListener(object: Animator.AnimatorListener {
+                                    override fun onAnimationStart(p0: Animator) {}
+                                    override fun onAnimationCancel(p0: Animator) {}
+                                    override fun onAnimationRepeat(p0: Animator) {}
+                                    override fun onAnimationEnd(p0: Animator) {
+                                        actionImage.rotation = 0F
+                                        myHealth -= myHealthChanges
+                                        myDefense = 1.0F
+
+                                        if (myHealth <= 0) {
+                                            // Perform action when the player's health is 0
+                                            actionTextView.text = "You Lose!"
+                                            meStatsText.text = "0 HP"
+                                            actionImage.setImageResource(R.drawable.dead)
+                                            attackSwitch.isEnabled = false
+                                            defendSwitch.isEnabled = false
+                                            healSwitch.isEnabled = false
+                                            rollButton.isEnabled = true
+                                            rollButton.text = "Play Again"
+                                        } else {
+
+                                            meStatsText.text = "$myHealth HP"
+                                            actionTextView.text = "YOU LOST $myHealthChanges HP!"
+
+
+                                            Handler(Looper.getMainLooper()).postDelayed({
+                                                myTurn()
+                                            }, 2000)
+                                        }
+
+                                    }
+                                }).start()
+                        }
+                        else if (monsterAction == 2) {
+                            // Perform action when Defend is enabled
+                            var monsterDefenseChanges = 1.0F
+                            actionImage.setImageResource(R.drawable.shield)
+                            actionImage.animate()
+                                .rotation(360F*3)
+                                .setDuration(1500)
+                                .setDuration(1500).setUpdateListener { p0 ->
+                                    monsterDefenseChanges = Random.nextInt(15, 100)/100.0F
+                                    actionTextView.text = "MONSTER IS DEFENDING:\n${(monsterDefenseChanges*100).toInt()}%"
+                                }
+                                .setListener(object: Animator.AnimatorListener {
+                                    override fun onAnimationStart(p0: Animator) {}
+                                    override fun onAnimationCancel(p0: Animator) {}
+                                    override fun onAnimationRepeat(p0: Animator) {}
+                                    override fun onAnimationEnd(p0: Animator) {
+                                        actionImage.rotation = 0F
+                                        monsterDefense = 1 - monsterDefenseChanges
+                                        actionTextView.text = "YOUR NEXT ATTACK WILL BE ${(monsterDefenseChanges*100).toInt()}% LESS EFFECTIVE"
+
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            myTurn()
+                                        }, 2000)
+                                    }
+                                }).start()
+                        }
+                        else if (monsterAction == 0) {
+                            // Perform action when Heal is enabled
+                            var monsterHealthChanges = 0
+                            actionImage.setImageResource(R.drawable.heart)
+                            actionImage.animate()
+                                .rotation(360F*3)
+                                .setDuration(1500).setUpdateListener { p0 ->
+                                    monsterHealthChanges = Random.nextInt(10,50)
+                                    actionTextView.text = "MONSTER IS HEALING:\n$monsterHealthChanges HP"
+                                }
+                                .setListener(object: Animator.AnimatorListener {
+                                    override fun onAnimationStart(p0: Animator) {}
+                                    override fun onAnimationCancel(p0: Animator) {}
+                                    override fun onAnimationRepeat(p0: Animator) {}
+                                    override fun onAnimationEnd(p0: Animator) {
+                                        actionImage.rotation = 0F
+                                        monsterHealth += monsterHealthChanges
+                                        monsterStatsText.text = "$monsterHealth HP"
+                                        actionTextView.text = "ADDED $monsterHealthChanges HP TO MONSTER's HEALTH!"
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            myTurn()
+                                        }, 2000)
+
+                                    }
+                                }).start()
+                        }
+                    }, 2000)
                 }
             }
 
+
             Handler(Looper.getMainLooper()).postDelayed({
-                countDownTimer.start()
+                // Monster turn with random actions
+                meCardView.cardElevation = 0F
+                monsterCardView.cardElevation = 20F
+
+                actionTextView.text = "MONSTER's TURN"
+                meText.text = "You"
+                monsterText.text = "Monster's Turn"
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    countDownTimer.start()
+                }, 1500)
             }, 2000)
+
 
 
 
@@ -210,139 +354,144 @@ class MainActivity : AppCompatActivity() {
 
 
 
+
+
         rollButton.setOnClickListener {
-            // Handle Roll button click event
-            // Perform action when the Roll button is clicked
 
-            if (attackSwitch.isChecked) {
-                // Perform action when Attack is enabled
-                var monsterHealthChanges = 0
+            if (rollButton.text == "Play Again"){
+                myHealth = 500
+                monsterHealth = 500
+                myDefense = 1.0F
+                monsterDefense = 1.0F
+                meStatsText.text = "$myHealth HP"
                 monsterStatsText.text = "$monsterHealth HP"
-                actionImage.setImageResource(R.drawable.sword)
-                actionImage.animate()
-                    .rotation(360F*3)
-                    .setDuration(1500)
-                    .setDuration(1500).setUpdateListener { p0 ->
-                        monsterHealthChanges = Random.nextInt(30)
-                        actionTextView.text = "$monsterHealthChanges HP"
-                    }
-                    .setListener(object: Animator.AnimatorListener {
-                    override fun onAnimationStart(p0: Animator) {
-                        attackSwitch.isEnabled = false
-                        defendSwitch.isEnabled = false
-                        healSwitch.isEnabled = false
-                        rollButton.isEnabled = false
-                    }
-                    override fun onAnimationCancel(p0: Animator) {}
-                    override fun onAnimationRepeat(p0: Animator) {}
-                    override fun onAnimationEnd(p0: Animator) {
-                        attackSwitch.isEnabled = true
-                        defendSwitch.isEnabled = true
-                        healSwitch.isEnabled = true
-                        rollButton.isEnabled = true
-                        actionImage.rotation = 0F
-                        monsterHealth -= monsterHealthChanges
-                        monsterStatsText.text = "$monsterHealth HP"
 
-                        monsterAction()
-                    }
-                }).start()
+                shrinkAnimation.start()
+                rollButton.isEnabled = false
+                attackSwitch.isEnabled = true
+                defendSwitch.isEnabled = true
+                healSwitch.isEnabled = true
+                attackSwitch.isChecked = false
+                defendSwitch.isChecked = false
+                healSwitch.isChecked = false
+                rollButton.text = "Roll"
+            } else {
 
-            } else if (defendSwitch.isChecked) {
-                // Perform action when Defend is enabled
-                var myDefenseChanges = 0.0F
-                meStatsText.text = "$myHealth HP"
-                actionImage.setImageResource(R.drawable.shield)
-                actionImage.animate()
-                    .rotation(360F*3)
-                    .setDuration(1500)
-                    .setDuration(1500).setUpdateListener { p0 ->
-                        myDefenseChanges = Random.nextInt(100)/100.0F
-                        actionTextView.text = "${myDefenseChanges*100}%"
-                    }
-                    .setListener(object: Animator.AnimatorListener {
-                    override fun onAnimationStart(p0: Animator) {
-                        attackSwitch.isEnabled = false
-                        defendSwitch.isEnabled = false
-                        healSwitch.isEnabled = false
-                        rollButton.isEnabled = false
-                    }
-                    override fun onAnimationCancel(p0: Animator) {}
-                    override fun onAnimationRepeat(p0: Animator) {}
-                    override fun onAnimationEnd(p0: Animator) {
-                        attackSwitch.isEnabled = true
-                        defendSwitch.isEnabled = true
-                        healSwitch.isEnabled = true
-                        rollButton.isEnabled = true
-                        actionImage.rotation = 0F
-                        myDefense = myDefenseChanges
-                        meStatsText.text = "$myHealth HP"
-
-                        monsterAction()
-                    }
-                }).start()
-
-            } else if (healSwitch.isChecked) {
-                // Perform action when Heal is enabled
-                var myHealthChanges = 0
-                meStatsText.text = "$myHealth HP"
-                actionImage.setImageResource(R.drawable.heart)
-                actionImage.animate()
-                    .rotation(360F*3)
-                    .setDuration(1500).setUpdateListener { p0 ->
-                        myHealthChanges = Random.nextInt(15)
-                        actionTextView.text = "$myHealthChanges HP"
-                    }
-                    .setListener(object: Animator.AnimatorListener {
-                    override fun onAnimationStart(p0: Animator) {
-                        attackSwitch.isEnabled = false
-                        defendSwitch.isEnabled = false
-                        healSwitch.isEnabled = false
-                        rollButton.isEnabled = false
-                    }
-                    override fun onAnimationCancel(p0: Animator) {}
-                    override fun onAnimationRepeat(p0: Animator) {}
-                    override fun onAnimationEnd(p0: Animator) {
-                        attackSwitch.isEnabled = true
-                        defendSwitch.isEnabled = true
-                        healSwitch.isEnabled = true
-                        rollButton.isEnabled = true
-                        actionImage.rotation = 0F
-                        myHealth += myHealthChanges
-                        meStatsText.text = "$myHealth HP"
-
-                        monsterAction()
+                if (attackSwitch.isChecked) {
+                    // Perform action when Attack is enabled
+                    var monsterHealthChanges = 0
+                    actionImage.setImageResource(R.drawable.sword)
+                    actionImage.animate()
+                        .rotation(360F*3)
+                        .setDuration(1500)
+                        .setDuration(1500).setUpdateListener { p0 ->
+                            monsterHealthChanges = (Random.nextInt(10,100)*monsterDefense).toInt()
+                            actionTextView.text = "ATTACKING:\n$monsterHealthChanges HP"
+                        }
+                        .setListener(object: Animator.AnimatorListener {
+                            override fun onAnimationStart(p0: Animator) {
+                                attackSwitch.isEnabled = false
+                                defendSwitch.isEnabled = false
+                                healSwitch.isEnabled = false
+                                rollButton.isEnabled = false
+                            }
+                            override fun onAnimationCancel(p0: Animator) {}
+                            override fun onAnimationRepeat(p0: Animator) {}
+                            override fun onAnimationEnd(p0: Animator) {
+                                actionImage.rotation = 0F
+                                monsterHealth -= monsterHealthChanges
+                                monsterDefense = 1.0F
 
 
-                    }
-                }).start()
+                                if (monsterHealth <= 0) {
+                                    // Perform action when the monster's health is 0
+                                    actionTextView.text = "You Win!"
+                                    monsterStatsText.text = "0 HP"
+                                    actionImage.setImageResource(R.drawable.trophy)
+                                    attackSwitch.isEnabled = false
+                                    defendSwitch.isEnabled = false
+                                    healSwitch.isEnabled = false
+                                    rollButton.isEnabled = true
+                                    rollButton.text = "Play Again"
+                                } else {
+                                    monsterStatsText.text = "$monsterHealth HP"
+                                    actionTextView.text = "MONSTER LOST $monsterHealthChanges HP!"
 
+                                    monsterAction()
+                                }
+
+
+                            }
+                        }).start()
+
+                }
+                else if (defendSwitch.isChecked) {
+
+                    // Perform action when Defend is enabled
+                    var myDefenseChanges = 1.0F
+                    actionImage.setImageResource(R.drawable.shield)
+                    actionImage.animate()
+                        .rotation(360F*3)
+                        .setDuration(1500)
+                        .setDuration(1500).setUpdateListener { p0 ->
+                            myDefenseChanges = Random.nextInt(15,100)/100.0F
+                            actionTextView.text = "DEFENDING:\n${(myDefenseChanges*100).toInt()}%"
+                        }
+                        .setListener(object: Animator.AnimatorListener {
+                            override fun onAnimationStart(p0: Animator) {
+                                attackSwitch.isEnabled = false
+                                defendSwitch.isEnabled = false
+                                healSwitch.isEnabled = false
+                                rollButton.isEnabled = false
+                            }
+                            override fun onAnimationCancel(p0: Animator) {}
+                            override fun onAnimationRepeat(p0: Animator) {}
+                            override fun onAnimationEnd(p0: Animator) {
+                                actionImage.rotation = 0F
+                                myDefense = 1 - myDefenseChanges
+                                actionTextView.text = "MONSTER's NEXT ATTACK WILL BE ${(myDefenseChanges*100).toInt()}% LESS EFFECTIVE"
+
+                                monsterAction()
+                            }
+                        }).start()
+
+                }
+                else if (healSwitch.isChecked) {
+                    // Perform action when Heal is enabled
+                    var myHealthChanges = 0
+                    actionImage.setImageResource(R.drawable.heart)
+                    actionImage.animate()
+                        .rotation(360F*3)
+                        .setDuration(1500).setUpdateListener { p0 ->
+                            myHealthChanges = Random.nextInt(10,50)
+                            actionTextView.text = "HEALING\n$myHealthChanges HP"
+                        }
+                        .setListener(object: Animator.AnimatorListener {
+                            override fun onAnimationStart(p0: Animator) {
+                                attackSwitch.isEnabled = false
+                                defendSwitch.isEnabled = false
+                                healSwitch.isEnabled = false
+                                rollButton.isEnabled = false
+                            }
+                            override fun onAnimationCancel(p0: Animator) {}
+                            override fun onAnimationRepeat(p0: Animator) {}
+                            override fun onAnimationEnd(p0: Animator) {
+                                actionImage.rotation = 0F
+                                myHealth += myHealthChanges
+                                meStatsText.text = "$myHealth HP"
+                                actionTextView.text = "ADDED $myHealthChanges HP TO YOUR HEALTH!"
+
+                                monsterAction()
+
+
+                            }
+                        }).start()
+
+                }
             }
 
-            if (myHealth <= 0) {
-                // Perform action when the player's health is 0
-                actionTextView.text = "You Lose!"
-                actionImage.setImageResource(R.drawable.dead)
-                attackSwitch.isEnabled = false
-                defendSwitch.isEnabled = false
-                healSwitch.isEnabled = false
-                rollButton.isEnabled = false
-            } else if (monsterHealth <= 0) {
-                // Perform action when the monster's health is 0
-                actionTextView.text = "You Win!"
-                actionImage.setImageResource(R.drawable.trophy)
-                attackSwitch.isEnabled = false
-                defendSwitch.isEnabled = false
-                healSwitch.isEnabled = false
-                rollButton.isEnabled = false
-            }
-
-            // Monster turn with random actions
 
 
-
-            //actionShowAnimation.start()
-            //actionHideAnimation.start()
         }
     }
 }
